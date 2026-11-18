@@ -1,0 +1,61 @@
+# ===== Data (downloaded or streamed by the notebook; never commit) =====
+data/
+*.wav
+*.flac
+*.mp3
+*.tar.gz
+*.tgz
+*.zip
+
+# ===== Models and checkpoints (large; share through Hugging Face Hub instead) =====
+runs/
+checkpoints/
+checkpoint-*/
+final/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.gguf
+*.ggml
+*.tflite
+*.mlmodel
+*.mlpackage/
+*.mlmodelc/
+
+# ===== Results: keep only the small summary files =====
+results/**
+!results/**/
+!results/**/summary.csv
+!results/**/summary.md
+!results/**/run_info.json
+!results/**/comparison_*.csv
+!results/**/log_history.json
+
+# ===== Google Colab / Google Drive =====
+drive/
+sample_data/
+
+# ===== Jupyter =====
+.ipynb_checkpoints/
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# ===== Secrets (Hugging Face tokens, API keys) =====
+.env
+.env.*
+*.token
+.huggingface/
+
+# ===== OS and editor files =====
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
