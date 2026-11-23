@@ -15,7 +15,7 @@ def test_normalize(norm):
 
 
 @pytest.mark.parametrize("words, digit", [
-    (["three", "तीन", "3", "३", "थ्री"], "3"),
+    (["three", "तीन", "3", "३"], "3"),
     (["zero", "शून्य", "0"], "0"),
     (["fifty", "पचास", "50"], "50"),
     (["पाँच", "पांच", "5"], "5"),

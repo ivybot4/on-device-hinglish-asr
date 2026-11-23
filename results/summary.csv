@@ -1,2 +1,15 @@
-model,dataset,split,n_utts,wer,t_wer,decoding,date
-openai/whisper-small,openslr104,test,2942,0.915,0.915,"zero-shot, temperature fallback 0.0-1.0 (compression ratio 1.35, logprob -1.0, seed 0), language=hi, fp16, 30 s chunks",2026-11-23
+model,dataset,split,n_utts,wer,t_wer,decoding,date,scoring
+openai/whisper-small,openslr104,test,2942,0.915,0.915,"zero-shot, temperature fallback 0.0-1.0 (compression ratio 1.35, logprob -1.0, seed 0), language=hi, fp16, 30 s chunks",2026-11-23,v1
+Trelis/tara,openslr104,test,2942,0.295,0.295,"zero-shot, temperature fallback 0.0-1.0 (compression ratio 1.35, logprob -1.0, seed 0), language=hi + mixedcode, bf16, 30 s pieces",2026-11-23,v1
+Qwen/Qwen3-ASR-0.6B,openslr104,test,2942,0.4362,0.4362,"zero-shot, qwen-asr 0.0.6 defaults (greedy, max 512 new tokens, repetition clean-up), language=None, bf16, whole clips",2026-11-23,v1
+nvidia/nemotron-3.5-asr-streaming-0.6b,openslr104,test,2942,0.4584,0.4584,"zero-shot, greedy RNN-T, streaming latency 560 ms, language=auto, float32, whole clips",2026-11-23,v1
+nvidia/nemotron-3.5-asr-streaming-0.6b,openslr104,test,2942,0.4546,0.4546,"zero-shot, greedy RNN-T, streaming latency 1120 ms, language=auto, float32, whole clips",2026-11-23,v1
+Surajgameramp/srota,openslr104,test,2942,0.3059,0.3059,"zero-shot, qwen-asr 0.0.6 defaults (greedy, max 512 new tokens, repetition clean-up), language=None, bf16, whole clips",2026-11-23,v1
+openai/whisper-small,openslr104,test,2942,0.9344,0.9078,"zero-shot, temperature fallback 0.0-1.0 (compression ratio 1.35, logprob -1.0, seed 0), language=hi, fp16, 30 s chunks",2026-11-22,v2
+Trelis/tara,openslr104,test,2942,0.2966,0.2947,"zero-shot, temperature fallback 0.0-1.0 (compression ratio 1.35, logprob -1.0, seed 0), language=hi + mixedcode, bf16, 30 s pieces",2026-11-22,v2
+Qwen/Qwen3-ASR-0.6B,openslr104,test,2942,0.5022,0.4209,"zero-shot, qwen-asr 0.0.6 defaults (greedy, max 512 new tokens, repetition clean-up), language=None, bf16, whole clips",2026-11-22,v2
+Surajgameramp/srota,openslr104,test,2942,0.328,0.3037,"zero-shot, qwen-asr 0.0.6 defaults (greedy, max 512 new tokens, repetition clean-up), language=None, bf16, whole clips",2026-11-22,v2
+nvidia/nemotron-3.5-asr-streaming-0.6b,openslr104,test,2942,0.6048,0.4027,"zero-shot, greedy RNN-T, streaming latency 560 ms, language=auto, float32, whole clips",2026-11-22,v2
+nvidia/nemotron-3.5-asr-streaming-0.6b,openslr104,test,2942,0.604,0.3985,"zero-shot, greedy RNN-T, streaming latency 1120 ms, language=auto, float32, whole clips",2026-11-22,v2
+nvidia/nemotron-3.5-asr-streaming-0.6b,openslr104,test,2942,0.3918,0.3897,"fine-tuned on OpenSLR 104 train (best checkpoint at step 3000, peak lr 0.0001, batch 100 s), greedy_batch RNN-T, streaming latency 560 ms, language=hi-IN, float32, whole clips",2026-11-23,v2
+nvidia/nemotron-3.5-asr-streaming-0.6b,openslr104,test,2942,0.3765,0.3745,"fine-tuned on OpenSLR 104 train (best checkpoint at step 3000, peak lr 0.0001, batch 100 s), greedy_batch RNN-T, streaming latency 1120 ms, language=hi-IN, float32, whole clips",2026-11-23,v2

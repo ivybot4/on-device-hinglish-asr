@@ -26,19 +26,30 @@ _DEV_DIGITS = str.maketrans("०१२३४५६७८९", "0123456789")
 
 
 class Normalizer:
-    def __init__(self, loanwords_path):
+    def __init__(self, loanwords_path, transliterations_path=None):
         with open(loanwords_path, encoding="utf-8") as f:
             self.loanwords = {unicodedata.normalize("NFC", r["devanagari"]): r["english"] for r in csv.DictReader(f)}
+        # English word -> accepted Devanagari forms, for T-WER. Without the file, T-WER equals WER.
+        self.transliterations = {}
+        if transliterations_path:
+            with open(transliterations_path, encoding="utf-8") as f:
+                for r in csv.DictReader(f):
+                    forms = self.transliterations.setdefault(self.for_scoring(r["english"]), set())
+                    forms.add(self.for_scoring(r["devanagari"]))
 
-    def normalize(self, text):
-        # Must stay identical to the code that made the training data.
+    def clean(self, text):
         t = unicodedata.normalize("NFC", text)
         t = re.sub("[​‌‍﻿]", "", t)
         t = t.lower()
         t = re.sub(r"[^ऀ-ॣ॰-ॿa-z0-9०-९ ]", " ", t)
-        return " ".join(self.loanwords.get(w, w) for w in t.split())
+        return " ".join(t.split())
+
+    def normalize(self, text):
+        # Must stay identical to the code that made the training data.
+        return " ".join(self.loanwords.get(w, w) for w in self.clean(text).split())
 
     def for_scoring(self, text):
+        # No loanword mapping, so a Devanagari loanword is an error in WER (T-WER allows it).
         # Models write numbers as digits or words; the transcripts only use words.
-        t = self.normalize(text).translate(_DEV_DIGITS)
+        t = self.clean(text).translate(_DEV_DIGITS)
         return " ".join(_NUMBERS.get(w, w) for w in t.split())
