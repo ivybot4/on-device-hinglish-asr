@@ -1,0 +1,2 @@
+model,dataset,split,n_utts,wer,t_wer,decoding,date
+openai/whisper-small,openslr104,test,2942,0.915,0.915,"zero-shot, temperature fallback 0.0-1.0 (compression ratio 1.35, logprob -1.0, seed 0), language=hi, fp16, 30 s chunks",2026-11-23
