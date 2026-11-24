@@ -60,3 +60,10 @@ env/
 Thumbs.db
 .vscode/
 .idea/
+
+android/app/src/main/assets/nemotron-v1-560ms/
+android/app/src/main/jniLibs/
+android/**/build/
+android/.gradle/
+android/local.properties
+exports/

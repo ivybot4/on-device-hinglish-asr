@@ -26,7 +26,7 @@ Main test sets are 2 standard benchmarking sets for Hinglish. Hindi, English and
 | Svarah | Indian English | https://huggingface.co/datasets/ai4bharat/Svarah |
 | LibriSpeech test-clean | English | https://huggingface.co/datasets/fixie-ai/librispeech_asr |
 
-# Architecture
+# Models
 
 | # | Model | Role | Method |
 |---|---|---|---|
@@ -48,9 +48,13 @@ Main test sets are 2 standard benchmarking sets for Hinglish. Hindi, English and
 1. Joins the Kaldi files (`segments`, `text`, `utt2spk`, `wav.scp`) into one utterance table and checks IDs and audio format (16 kHz, mono, 16-bit).
 2. Splits train/validation by recording (~5% of hours), so no recording is in both.
 3. Removes test leaks: recordings shared with the test set and identical transcripts with 3+ words.
-4. Drops clips shorter than 0.5 s or longer than 20 s.
+4. Drops train and validation clips shorter than 0.5 s or longer than 20 s. The test set keeps all clips.
 5. Finds English words written in Devanagari (e.g. फ़ाइल → file) for conversion to Latin script.
-6. Normalizes the transcript text
+6. Normalizes the transcript text, and drops utterances with digits (11%) or empty text.
+
+Final sizes: train 41,531 clips (67.5 h), validation 2,058 clips (3.4 h), test 2,942 clips (4.76 h).
+
+[validation-leak-check.ipynb](notebooks/analysis/validation-leak-check.ipynb) checks validation against train with the same rule: 9.0% of validation clips (7.3% of words) have a transcript that is also in train.
 
 ## Normalization and Scoring
 
@@ -100,6 +104,33 @@ Basically, WER is exact, T-WER is exact but okay without the proper script.
 5. Checks before training: streaming settings unchanged, `hi-IN` on every clip, the tokenizer covers the labels (8 of 2.1M characters cannot be encoded, all ऩ), and the model can overfit 50 clips (loss 123 → 10).
 6. The best checkpoint transcribes the test set at 560 ms and 1,120 ms.
 
+## Export and Quantization
+
+[nemo-fine-quan.ipynb](notebooks/quantization/nemo-fine-quan.ipynb) exports the fine-tuned model with the official sherpa-onnx script (`scripts/nemo/nemotron-3.5-asr-streaming-0.6b/export_onnx.py`, changed to load the local checkpoint):
+
+1. Three ONNX graphs at 560 ms: encoder (with cache inputs and the `prompt_index` input), decoder and joiner.
+2. INT8 is the script default: ONNX Runtime dynamic quantization, per-tensor, for all three graphs.
+3. Size: FP32 2.47 GB, INT8 650 MB (encoder 627 MB).
+
+[nemo-ft-v1-int8-test.ipynb](notebooks/quantization/nemo-ft-v1-int8-test.ipynb) runs the INT8 model in sherpa-onnx on CPU with real chunk-by-chunk streaming at 560 ms, and scores the full test set.
+
+## Android App
+
+[android/](android/) is the sherpa-onnx v2.0.3 Android demo (Apache-2.0, see [LICENSE-sherpa-onnx](android/LICENSE-sherpa-onnx)) with these changes:
+
+1. Model case `1001` in `OnlineRecognizer.kt` for `assets/nemotron-v1-560ms/`.
+2. `stream.setOption("language", "hi-IN")` in `MainActivity.kt`, after each new stream and each reset.
+3. `noCompress 'onnx'` in `app/build.gradle` and `-Xmx4096m` in `gradle.properties`, so the 650 MB model builds.
+
+Files not in git:
+
+| Files | Source | Copy to |
+|---|---|---|
+| `libsherpa-onnx-jni.so`, `libonnxruntime.so` | `sherpa-onnx-v2.0.3-android.tar.bz2` (GitHub releases), `arm64-v8a` | `android/app/src/main/jniLibs/arm64-v8a/` |
+| `encoder.int8.onnx`, `decoder.int8.onnx`, `joiner.int8.onnx`, `tokens.txt` | The INT8 export | `android/app/src/main/assets/nemotron-v1-560ms/` |
+
+The app runs live microphone captions in an arm64 emulator.
+
 
 # Results
 
@@ -124,34 +155,55 @@ Real-time factor is processing time divided by audio length on the L4, so lower 
 - Trelis has the lowest WER and T-WER, which supports using it as the distillation teacher.
 - Nemotron has the second-highest WER but the third-lowest T-WER: most of its errors are English words in Devanagari (बैकग्राउंड्स for backgrounds), which fine-tuning should fix.
 - Nemotron is the fastest by about 5x, and halving its latency to 560 ms barely changes WER or T-WER.
+- Nemotron rows are whole clips with the attention limited to the latency, not chunk-by-chunk streaming.
 - Whisper small writes English words in Devanagari and loops on about 6% of clips.
 - The 3 test clips longer than 30 s have transcripts that do not match their audio, so every model loses some words there.
 
-## Fine-tuned
+## Fine-tuned (v1)
 
 Training ran for 0.91 h on a Colab A100 (40 GB). Validation WER was lowest at step 3,000 and training stopped at step 6,000.
 
-| Validation, 560 ms | WER | T-WER |
-|---|---|---|
-| Step 0 (no training) | 0.480 | 0.297 |
-| Step 3,000 (best) | 0.224 | 0.223 |
+| Validation, 560 ms | WER | T-WER | Empty outputs |
+|---|---|---|---|
+| Step 0 (no training) | 0.480 | 0.297 | 2 |
+| Step 3,000 (best) | 0.224 | 0.223 | 78 |
 
-| Test | WER | T-WER |
-|---|---|---|
-| Nemotron zero-shot, 560 ms | 0.605 | 0.403 |
-| Nemotron fine-tuned, 560 ms | 0.392 | 0.390 |
-| Nemotron zero-shot, 1120 ms | 0.604 | 0.399 |
-| Nemotron fine-tuned, 1120 ms | 0.377 | 0.375 |
+| Test | WER | T-WER | Empty outputs |
+|---|---|---|---|
+| Nemotron zero-shot, NeMo, 560 ms | 0.611 | 0.399 | 15 |
+| Nemotron v1, NeMo, 560 ms | 0.392 | 0.390 | 220 |
+| Nemotron v1, NeMo, 1120 ms | 0.377 | 0.375 | 308 |
+| **Nemotron v1, sherpa-onnx INT8, real streaming 560 ms** | **0.4045** | **0.4020** | **236** |
 
-- Test WER fell by about a third. The model now writes English words in Latin script, so WER and T-WER are almost equal.
-- Test T-WER barely moved (0.403 → 0.390), while validation T-WER fell from 0.297 to 0.223. The validation clips come from the training corpus, so the test scores are the ones to compare.
-- The fine-tuned model outputs nothing for 220 test clips at 560 ms (308 at 1,120 ms), against 15 zero-shot. These clips hold 6.7% of the reference words. On the other 2,722 clips, WER is 0.348 and T-WER 0.346 (zero-shot on the same clips: 0.600 and 0.394).
-- Many of the empty clips look misaligned: the zero-shot output has words the reference lacks, e.g. reference "हमने यह भी सीखा कि", zero-shot "क्रमबद्ध कैसे करें। हमने यह भी". The cause is not confirmed.
+NeMo rows are whole clips with the attention limited to the latency. The sherpa-onnx row is the deployed pipeline.
+
+- Test WER fell by about a third (0.611 → 0.392). The model now writes English words in Latin script, so WER and T-WER are almost equal.
+- Test T-WER barely moved (0.399 → 0.390), while validation T-WER fell from 0.297 to 0.223. Validation was easier before training too (0.480 against 0.611), so the test scores are the ones to compare.
+- The deployed pipeline (export, INT8 and real streaming together) costs 1.3 points of WER.
+- NeMo with `auto` reproduces the `transformers` zero-shot score (0.603 against 0.605 WER), so both pipelines agree.
+- The validation leak does not explain the gap: v1 scores 0.217 on leaked clips and 0.224 on the others.
 - Fine-tuned Nemotron is still behind Trelis (0.297) and Srota (0.328) on WER.
-- The zero-shot rows come from `transformers` with `language=auto`, the fine-tuned rows from NeMo with `hi-IN`, and the check that NeMo reproduces the zero-shot score was not run. The validation table compares the same setup before and after training.
+
+[nemotron-v1-diagnostics.ipynb](notebooks/analysis/nemotron-v1-diagnostics.ipynb) checks the empty outputs:
+
+- They rise on validation too (2 → 78), so the fine-tune causes them, not only the test data.
+- Empty clips are a little shorter (median 4 s against 5 s).
+- Without them (2,722 clips), WER is 0.348 and T-WER 0.346 (zero-shot on the same clips: 0.600 and 0.394).
+- Most segment boundaries are whole seconds, so clips can cut words or hold extra speech at the edges. The likely cause is training on these edges: the model learns to output nothing for speech without a label.
+
+## Known Limitations (v1)
+
+1. Empty outputs on 8% of test clips.
+2. Misses the WER target (≤ 1.3 × Trelis = 0.386).
+3. Trained on tutorials only: full English sentences come out in Devanagari.
+4. Not evaluated on HiACC, Lahaja or Svarah yet.
+5. No phone measurements yet (latency, real-time factor, memory).
+
+v2: re-cut training clips with a forced aligner, and add English and conversational data.
 
 
 # Future Scope
 
 1. Deploy the model on laptop for live Zoom or Google Meet calls.
 2. When Android permits, deploy the model for live calls on Zoom, Meet or WhatsApp video calling on phone.
+3. Voxtral Mini 4B Realtime for the laptop.
